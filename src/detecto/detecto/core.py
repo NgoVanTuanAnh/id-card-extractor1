@@ -206,14 +206,15 @@ class Dataset(torch.utils.data.Dataset):
                             box[[0,2]] = box[[2,0]]
                             targets['boxes'][idx] = box
                 else:
-                    image = t(image)
-
+                    image = t(image=image)['image']
+                    
             # Scale down box if necessary
             if scale_factor != 1.0:
                 for idx, box in enumerate(targets['boxes']):
                     box = (box / scale_factor).long()
                     targets['boxes'][idx] = box
 
+        image = default_transforms()(image)
         return image, targets
 
 

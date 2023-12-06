@@ -30,7 +30,9 @@ def default_transforms():
         >>> dataset = Dataset('labels.csv', 'images/', transform=defaults)
     """
 
-    return transforms.Compose([transforms.ToTensor(), normalize_transform()])
+    return transforms.Compose([transforms.ToPILImage(),
+                               transforms.ToTensor(), 
+                               normalize_transform()])
 
 
 def filter_top_predictions(labels, boxes, scores):
