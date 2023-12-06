@@ -206,8 +206,11 @@ class Dataset(torch.utils.data.Dataset):
                             box[[0,2]] = box[[2,0]]
                             targets['boxes'][idx] = box
                 else:
-                    image = t(image=image)['image']
-                    
+                    try:
+                        image = t(image=image)['image']
+                    except TypeError as e:
+                        pass
+                        
             # Scale down box if necessary
             if scale_factor != 1.0:
                 for idx, box in enumerate(targets['boxes']):
@@ -288,6 +291,7 @@ class Model:
         # Mappings to convert from string labels to ints and vice versa
         self._classes = ['__background__'] + classes
         self._int_mapping = {label: index for index, label in enumerate(self._classes)}
+        # self._str_mapping = {index: label for index, label in enumerate(self._classes)}
         self.metric = MeanAveragePrecision()
 
     # Returns the raw predictions from feeding an image or list of images into the model
@@ -358,7 +362,6 @@ class Model:
         is_single_image = not _is_iterable(images)
         images = [images] if is_single_image else images
         preds = self._get_raw_predictions(images)
-
         results = []
         for pred in preds:
             # Convert predicted ints into their corresponding string labels
@@ -419,17 +422,25 @@ class Model:
 
     def eval_detection(self, val_dataset):
         self._model.eval()
-        mAPs = []
-        if val_dataset is not None and not isinstance(val_dataset, DataLoader):
-            val_dataset = DataLoader(val_dataset)
         with torch.no_grad():
-            for images, targets in val_dataset:
-                self._convert_to_int_labels(targets)
-                images, targets = self._to_device(images, targets)
-                preds = self._model(images)
-                mAP = self.metric(preds, targets)
-                mAPs.append(mAP['map'])
+            mAPs = []
+            if val_dataset is not None and not isinstance(val_dataset, DataLoader):
+                val_dataset = DataLoader(val_dataset)
+            with torch.no_grad():
+                for images, targets in val_dataset:
+                    self._convert_to_int_labels(targets)
+                    images, targets = self._to_device(images, targets)
+                    labels, bboxes, scores = self.predict_top(images)[0]
+                    preds = [{
+                        'boxes': torch.tensor(bboxes).to(self._device),
+                        'labels': torch.tensor([self._int_mapping[label] for label in labels]).to(self._device),
+                        'scores': torch.tensor(scores).to(self._device)
+                    }]
+                    mAP = self.metric(preds, targets)
+                    mAPs.append(mAP['map'])
+            print(mAPs)
         return torch.tensor(mAPs).mean()
+    
         
     def fit(self, dataset, val_dataset=None, epochs=10, learning_rate=0.005, momentum=0.9,
             weight_decay=0.0005, gamma=0.1, lr_step_size=3, verbose=True):
