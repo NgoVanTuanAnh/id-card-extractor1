@@ -1,3 +1,4 @@
 *.ipynb
 image_crop/
 weight/
+__pycache__/

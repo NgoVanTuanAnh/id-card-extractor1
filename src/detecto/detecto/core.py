@@ -510,6 +510,7 @@ class Model:
             val_dataset = DataLoader(val_dataset)
 
         losses = []
+        mAPs = []
         # Get parameters that have grad turned on (i.e. parameters that should be trained)
         parameters = [p for p in self._model.parameters() if p.requires_grad]
         # Create an optimizer that uses SGD (stochastic gradient descent) to train the parameters
@@ -563,6 +564,7 @@ class Model:
                 avg_map = self.eval_detection(val_dataset)
                 avg_loss /= len(val_dataset.dataset)
                 losses.append(avg_loss)
+                mAPs.append(avg_map)
 
                 if verbose:
                     print('mAP:', avg_map.item())
@@ -572,7 +574,7 @@ class Model:
             lr_scheduler.step()
 
         if len(losses) > 0:
-            return losses
+            return losses, mAPs
 
     def get_internal_model(self):
         """Returns the internal torchvision model that this class contains
