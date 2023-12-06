@@ -438,7 +438,6 @@ class Model:
                     }]
                     mAP = self.metric(preds, targets)
                     mAPs.append(mAP['map'])
-            print(mAPs)
         return torch.tensor(mAPs).mean()
     
         

@@ -2,7 +2,7 @@ import albumentations as A
 
 def get_augumentation_pipelines():    
     augumentations = A.Sequential([
-        A.InvertImg(p=0.2),
+        # A.InvertImg(p=0.2),
         A.OneOf([
             A.ChannelDropout(p=0.4),
             A.ChannelShuffle(p=0.4),
@@ -10,7 +10,7 @@ def get_augumentation_pipelines():
             A.Equalize(p=0.4),
             A.RandomBrightness(),
             A.RandomBrightnessContrast(),
-        ]),
+        ], p=0.2),
         A.OneOf([
             A.OneOf([
                 A.GaussianBlur(),
@@ -25,6 +25,12 @@ def get_augumentation_pipelines():
             A.Emboss(p=0.2),
             A.GaussNoise(var_limit=(50, 150)),
             A.ISONoise(color_shift=(0.1, 0.3), intensity=(0.25, 0.65)),
+        ]),
+        A.OneOf([
+            A.RandomRain(),
+            A.RandomFog(),
+            A.RandomShadow(),
+            A.RandomSunFlare()
         ])
     ])
     
