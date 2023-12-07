@@ -562,12 +562,12 @@ class Model:
                 total_loss = sum(loss for loss in loss_dict.values())
                 losses.append(total_loss.item())
                 # Zero any old/existing gradients on the model's parameters
-                print(self.get_lr(optimizer))
                 optimizer.zero_grad()
                 # Compute gradients for each parameter based on the current loss calculation
                 total_loss.backward()
                 # Update model parameters from gradients: param -= learning_rate * param.grad
                 optimizer.step()
+            print('learning rate:', self.get_lr(optimizer))
             history['loss'].append(torch.tensor(losses).mean().item())
             del losses
             # Validation step
