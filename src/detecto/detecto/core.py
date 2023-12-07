@@ -542,8 +542,8 @@ class Model:
             'mAP': []
         }
         # Train on the entire dataset for the specified number of times (epochs)
+        previous_loss = 999
         for epoch in range(epochs):
-            previous_loss = 999
             if verbose:
                 print('Epoch {} of {}'.format(epoch + 1, epochs))
 
