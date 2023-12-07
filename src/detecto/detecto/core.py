@@ -430,12 +430,13 @@ class Model:
                 for images, targets in val_dataset:
                     self._convert_to_int_labels(targets)
                     images, targets = self._to_device(images, targets)
-                    labels, bboxes, scores = self.predict_top(images)[0]
-                    preds = [{
-                        'boxes': torch.tensor(bboxes).to(self._device),
-                        'labels': torch.tensor([self._int_mapping[label] for label in labels]).to(self._device),
-                        'scores': torch.tensor(scores).to(self._device)
-                    }]
+                    # labels, bboxes, scores = self.predict_top(images)[0]
+                    # preds = [{
+                    #     'boxes': torch.tensor(bboxes).to(self._device),
+                    #     'labels': torch.tensor([self._int_mapping[label] for label in labels]).to(self._device),
+                    #     'scores': torch.tensor(scores).to(self._device)
+                    # }]
+                    preds = self._model(images)
                     mAP = self.metric(preds, targets)
                     mAPs.append(mAP['map'])
         return torch.tensor(mAPs).mean()
@@ -520,7 +521,14 @@ class Model:
         if val_dataset is not None and not isinstance(val_dataset, DataLoader):
             val_dataset = DataLoader(val_dataset)
 
-        losses = []
+        history = {
+            'loss': [],
+            'val_loss': [],
+            'mAP': [],
+            'val_mAP': []
+        }
+        
+        
         mAPs = []
         # Get parameters that have grad turned on (i.e. parameters that should be trained)
         parameters = [p for p in self._model.parameters() if p.requires_grad]
@@ -541,6 +549,7 @@ class Model:
                 print('Begin iterating over training dataset')
 
             iterable = tqdm(dataset, position=0, leave=True) if verbose else dataset
+            losses = []
             for images, targets in iterable:
                 self._convert_to_int_labels(targets)
                 images, targets = self._to_device(images, targets)
@@ -549,14 +558,16 @@ class Model:
                 # image and target, with a lower loss being better)
                 loss_dict = self._model(images, targets)
                 total_loss = sum(loss for loss in loss_dict.values())
-
+                losses.append(total_loss.item())
                 # Zero any old/existing gradients on the model's parameters
                 optimizer.zero_grad()
                 # Compute gradients for each parameter based on the current loss calculation
                 total_loss.backward()
                 # Update model parameters from gradients: param -= learning_rate * param.grad
                 optimizer.step()
-
+            history['loss'].append(torch.tensor(losses).mean().item())
+            history['mAP'].append(self.eval_detection(val_dataset))
+            
             # Validation step
             if val_dataset is not None:
                 avg_loss = 0
@@ -574,8 +585,8 @@ class Model:
 
                 avg_map = self.eval_detection(val_dataset)
                 avg_loss /= len(val_dataset.dataset)
-                losses.append(avg_loss)
-                mAPs.append(avg_map)
+                history['val_loss'].append(avg_loss)
+                history['val_mAP'].append(avg_map.item())
 
                 if verbose:
                     print('mAP:', avg_map.item())
@@ -585,7 +596,7 @@ class Model:
             lr_scheduler.step()
 
         if len(losses) > 0:
-            return losses, mAPs
+            return history
 
     def get_internal_model(self):
         """Returns the internal torchvision model that this class contains
