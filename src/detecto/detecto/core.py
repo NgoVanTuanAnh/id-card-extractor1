@@ -563,7 +563,7 @@ class Model:
                 total_loss.backward()
                 # Update model parameters from gradients: param -= learning_rate * param.grad
                 optimizer.step()
-            history['loss'].append(torch.tensor(losses).item())
+            history['loss'].append(torch.tensor(losses).mean().item())
             del losses
             # Validation step
             if val_dataset is not None:
