@@ -597,6 +597,9 @@ class Model:
                     print('mAP:', avg_map.item())
                     print('Loss: {}'.format(avg_loss))
 
+                if os.path.isdir('save') is not True:
+                    os.mkdir('save')
+                self.save(os.path.join('save', f'weight-model-{epoch}.pth'))
             # Update the learning rate every few epochs
             lr_scheduler.step()
 
