@@ -267,7 +267,7 @@ class Model:
 
         # Load a model pre-trained on COCO
         if model_name == self.DEFAULT:
-            self._model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=pretrained)
+            self._model = torchvision.models.detection.fasterrcnn_resnet50_fpn_v2(pretrained=pretrained)
         elif model_name == self.MOBILENET:
             self._model = torchvision.models.detection.fasterrcnn_mobilenet_v3_large_fpn(pretrained=pretrained)
         elif model_name == self.MOBILENET_320:
@@ -445,6 +445,9 @@ class Model:
                     mAPs.append(mAP['map'])
         return torch.tensor(mAPs).mean()
     
+    def get_lr(self, optimizer):
+        for param_group in optimizer.param_groups:
+            return param_group['lr']
         
     def fit(self, dataset, val_dataset=None, epochs=10, learning_rate=0.005, momentum=0.9,
             weight_decay=0.0005, gamma=0.1, lr_step_size=3, verbose=True):
@@ -525,12 +528,10 @@ class Model:
         if val_dataset is not None and not isinstance(val_dataset, DataLoader):
             val_dataset = DataLoader(val_dataset)
 
-        losses = []
-        mAPs = []
         # Get parameters that have grad turned on (i.e. parameters that should be trained)
         parameters = [p for p in self._model.parameters() if p.requires_grad]
         # Create an optimizer that uses SGD (stochastic gradient descent) to train the parameters
-        optimizer = torch.optim.Adam(parameters, lr=learning_rate, weight_decay=weight_decay)
+        optimizer = torch.optim.Adam(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
         # Create a learning rate scheduler that decreases learning rate by gamma every lr_step_size epochs
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size, gamma=gamma)
         
@@ -567,8 +568,8 @@ class Model:
                 total_loss.backward()
                 # Update model parameters from gradients: param -= learning_rate * param.grad
                 optimizer.step()
-            print('learning rate:', self.get_lr(optimizer))
             history['loss'].append(torch.tensor(losses).mean().item())
+            print(self.get_lr(optimizer))
             del losses
             # Validation step
             if val_dataset is not None:
@@ -597,8 +598,7 @@ class Model:
             # Update the learning rate every few epochs
             lr_scheduler.step()
 
-        if len(losses) > 0:
-            return history
+        return history
 
     def get_internal_model(self):
         """Returns the internal torchvision model that this class contains
