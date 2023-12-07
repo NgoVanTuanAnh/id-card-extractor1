@@ -430,7 +430,7 @@ class Model:
                 for images, targets in val_dataset:
                     self._convert_to_int_labels(targets)
                     images, targets = self._to_device(images, targets)
-                    # labels, bboxes, scores = self.predict_top(images)[0]
+                    labels, bboxes, scores = self.predict_top(images)[0]
                     # preds = [{
                     #     'boxes': torch.tensor(bboxes).to(self._device),
                     #     'labels': torch.tensor([self._int_mapping[label] for label in labels]).to(self._device),
@@ -521,14 +521,7 @@ class Model:
         if val_dataset is not None and not isinstance(val_dataset, DataLoader):
             val_dataset = DataLoader(val_dataset)
 
-        history = {
-            'loss': [],
-            'val_loss': [],
-            'mAP': [],
-            'val_mAP': []
-        }
-        
-        
+        losses = []
         mAPs = []
         # Get parameters that have grad turned on (i.e. parameters that should be trained)
         parameters = [p for p in self._model.parameters() if p.requires_grad]
@@ -536,7 +529,12 @@ class Model:
         optimizer = torch.optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
         # Create a learning rate scheduler that decreases learning rate by gamma every lr_step_size epochs
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size, gamma=gamma)
-
+        
+        history = {
+            'loss': [],
+            'val_loss': [],
+            'mAP': []
+        }
         # Train on the entire dataset for the specified number of times (epochs)
         for epoch in range(epochs):
             if verbose:
@@ -565,9 +563,8 @@ class Model:
                 total_loss.backward()
                 # Update model parameters from gradients: param -= learning_rate * param.grad
                 optimizer.step()
-            history['loss'].append(torch.tensor(losses).mean().item())
-            history['mAP'].append(self.eval_detection(val_dataset))
-            
+            history['loss'].append(torch.tensor(losses).item())
+            del losses
             # Validation step
             if val_dataset is not None:
                 avg_loss = 0
@@ -586,7 +583,7 @@ class Model:
                 avg_map = self.eval_detection(val_dataset)
                 avg_loss /= len(val_dataset.dataset)
                 history['val_loss'].append(avg_loss)
-                history['val_mAP'].append(avg_map.item())
+                history['mAP'].append(avg_map)
 
                 if verbose:
                     print('mAP:', avg_map.item())
