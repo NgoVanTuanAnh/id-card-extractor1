@@ -4,9 +4,9 @@ import random
 import torch
 import torchvision
 
-from torchmetrics.detection import MeanAveragePrecision
+from torchmetrics.detection import IntersectionOverUnion
 from detecto.config import config
-from detecto.utils import default_transforms, filter_top_predictions, xml_to_csv, _is_iterable, read_image
+from detecto.utils import default_transforms, filter_top_predictions, xml_to_csv, _is_iterable, read_image, non_max_suppression_fast
 from torchvision import transforms
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from tqdm import tqdm
@@ -292,7 +292,7 @@ class Model:
         self._classes = ['__background__'] + classes
         self._int_mapping = {label: index for index, label in enumerate(self._classes)}
         # self._str_mapping = {index: label for index, label in enumerate(self._classes)}
-        self.metric = MeanAveragePrecision()
+        self.metric = IntersectionOverUnion(class_metrics=True)
 
     # Returns the raw predictions from feeding an image or list of images into the model
     def _get_raw_predictions(self, images):
@@ -435,14 +435,16 @@ class Model:
                     self._convert_to_int_labels(targets)
                     images, targets = self._to_device(images, targets)
                     labels, bboxes, scores = self.predict_top(images)[0]
-                    # preds = [{
-                    #     'boxes': torch.tensor(bboxes).to(self._device),
-                    #     'labels': torch.tensor([self._int_mapping[label] for label in labels]).to(self._device),
-                    #     'scores': torch.tensor(scores).to(self._device)
-                    # }]
-                    preds = self._model(images)
+                    final_boxes, final_labels, final_scores = non_max_suppression_fast(bboxes.numpy(), labels, 0.15, scores)
+                    preds = [{
+                        'boxes': torch.tensor(final_boxes).to(self._device),
+                        'labels': torch.tensor([self._int_mapping[label] for label in final_labels]).to(self._device),
+                        'scores': torch.tensor(final_scores).to(self._device)
+                    }]
+                    # preds = self._model(images)
                     mAP = self.metric(preds, targets)
-                    mAPs.append(mAP['map'])
+                    print(mAP)
+                    mAPs.append(mAP['iou'].item())
         return torch.tensor(mAPs).mean()
     
     def get_lr(self, optimizer):
