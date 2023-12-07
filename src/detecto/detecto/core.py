@@ -443,7 +443,6 @@ class Model:
                     }]
                     # preds = self._model(images)
                     mAP = self.metric(preds, targets)
-                    print(mAP)
                     mAPs.append(mAP['iou'].item())
         return torch.tensor(mAPs).mean()
     
@@ -601,9 +600,14 @@ class Model:
                 if os.path.isdir('save') is not True:
                     os.mkdir('save')
                 
+                # Save model
                 if avg_loss < previous_loss:
+                    previous_loss = avg_loss
+                    print('best model saved at epoch {} with valid loss {}'.format(epoch, avg_loss))
                     self.save(os.path.join('save', 'best-model.pth'))
+                print('model saved!')
                 self.save(os.path.join('save', f'weight-model-{epoch}.pth'))
+
             # Update the learning rate every few epochs
             lr_scheduler.step()
 
