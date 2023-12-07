@@ -533,7 +533,7 @@ class Model:
         # Get parameters that have grad turned on (i.e. parameters that should be trained)
         parameters = [p for p in self._model.parameters() if p.requires_grad]
         # Create an optimizer that uses SGD (stochastic gradient descent) to train the parameters
-        optimizer = torch.optim.Adam(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+        optimizer = torch.optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
         # Create a learning rate scheduler that decreases learning rate by gamma every lr_step_size epochs
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size, gamma=gamma)
         
@@ -544,6 +544,7 @@ class Model:
         }
         # Train on the entire dataset for the specified number of times (epochs)
         for epoch in range(epochs):
+            previous_loss = 999
             if verbose:
                 print('Epoch {} of {}'.format(epoch + 1, epochs))
 
@@ -599,6 +600,9 @@ class Model:
 
                 if os.path.isdir('save') is not True:
                     os.mkdir('save')
+                
+                if avg_loss < previous_loss:
+                    self.save(os.path.join('save', 'best-model.pth'))
                 self.save(os.path.join('save', f'weight-model-{epoch}.pth'))
             # Update the learning rate every few epochs
             lr_scheduler.step()
