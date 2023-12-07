@@ -419,6 +419,10 @@ class Model:
             results.append(filter_top_predictions(*pred))
 
         return results
+    
+    def get_lr(self, optimizer):
+        for param_group in optimizer.param_groups:
+            return param_group['lr']
 
     def eval_detection(self, val_dataset):
         self._model.eval()
@@ -526,7 +530,7 @@ class Model:
         # Get parameters that have grad turned on (i.e. parameters that should be trained)
         parameters = [p for p in self._model.parameters() if p.requires_grad]
         # Create an optimizer that uses SGD (stochastic gradient descent) to train the parameters
-        optimizer = torch.optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+        optimizer = torch.optim.Adam(parameters, lr=learning_rate, weight_decay=weight_decay)
         # Create a learning rate scheduler that decreases learning rate by gamma every lr_step_size epochs
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=lr_step_size, gamma=gamma)
         
@@ -558,6 +562,7 @@ class Model:
                 total_loss = sum(loss for loss in loss_dict.values())
                 losses.append(total_loss.item())
                 # Zero any old/existing gradients on the model's parameters
+                print(self.get_lr(optimizer))
                 optimizer.zero_grad()
                 # Compute gradients for each parameter based on the current loss calculation
                 total_loss.backward()
