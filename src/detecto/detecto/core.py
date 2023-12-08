@@ -464,7 +464,7 @@ class Model:
             return param_group['lr']
         
     def fit(self, dataset, val_dataset=None, epochs=10, learning_rate=0.005, momentum=0.9,
-            weight_decay=0.0005, gamma=0.1, lr_step_size=3, verbose=True, threshiou=0.5, use_l2=False):
+            weight_decay=0.0005, gamma=0.1, lr_step_size=3, verbose=True, threshiou=0.5, lamda=0.00001):
         """Train the model on the given dataset. If given a validation
         dataset, returns a list of loss scores at each epoch.
 
@@ -582,8 +582,8 @@ class Model:
                 loss_dict = self._model(images, targets)
                 total_loss = sum(loss for loss in loss_dict.values())
                 # Compute l2 loss component
-                if use_l2:
-                    l2_weight = weight_decay
+                if lamda:
+                    l2_weight = lamda
                     l2_parameters = []
                     for parameter in self._model.parameters():
                         l2_parameters.append(parameter.view(-1))
