@@ -292,7 +292,7 @@ class Model:
         self._classes = ['__background__'] + classes
         self._int_mapping = {label: index for index, label in enumerate(self._classes)}
         # self._str_mapping = {index: label for index, label in enumerate(self._classes)}
-        self.metric = IntersectionOverUnion(class_metrics=True)
+        self.calc_iou = IntersectionOverUnion(class_metrics=True)
 
     # Returns the raw predictions from feeding an image or list of images into the model
     def _get_raw_predictions(self, images):
@@ -424,7 +424,7 @@ class Model:
         for param_group in optimizer.param_groups:
             return param_group['lr']
 
-    def eval_detection(self, val_dataset, threshiou=0.5):
+    def eval_detection(self, val_dataset, threshiou):
         
         num_gt_boxes = 0
         num_det_boxes = 0
@@ -448,7 +448,7 @@ class Model:
                     # preds = self._model(images)
                     num_gt_boxes += len(targets[0]['boxes'])
                     num_det_boxes += len(final_boxes)
-                    iou = self.metric(preds, targets)
+                    iou = self.calc_iou(preds, targets)
                     del iou['iou']
                     for key in iou:
                         if iou[key] >= threshiou:
@@ -464,7 +464,7 @@ class Model:
             return param_group['lr']
         
     def fit(self, dataset, val_dataset=None, epochs=10, learning_rate=0.005, momentum=0.9,
-            weight_decay=0.0005, gamma=0.1, lr_step_size=3, verbose=True):
+            weight_decay=0.0005, gamma=0.1, lr_step_size=3, verbose=True, threshiou=0.5, use_l2=False):
         """Train the model on the given dataset. If given a validation
         dataset, returns a list of loss scores at each epoch.
 
@@ -521,6 +521,9 @@ class Model:
             [0.11191498369799327, 0.09899920264606253, 0.08454859235434461,
                 0.06825731012780788, 0.06236840748117637]
         """
+        
+        def compute_l2_loss(w):
+            return torch.square(w).sum()
 
         if verbose and self._device == torch.device('cpu'):
             print('It looks like you\'re training your model on a CPU. '
@@ -578,6 +581,15 @@ class Model:
                 # image and target, with a lower loss being better)
                 loss_dict = self._model(images, targets)
                 total_loss = sum(loss for loss in loss_dict.values())
+                # Compute l2 loss component
+                if use_l2:
+                    l2_weight = weight_decay
+                    l2_parameters = []
+                    for parameter in self._model.parameters():
+                        l2_parameters.append(parameter.view(-1))
+                    l2 = l2_weight * compute_l2_loss(torch.cat(l2_parameters))
+                    # Add l2 loss component
+                    total_loss += l2
                 losses.append(total_loss.item())
                 # Zero any old/existing gradients on the model's parameters
                 optimizer.zero_grad()
@@ -603,7 +615,7 @@ class Model:
                         total_loss = sum(loss for loss in loss_dict.values())
                         avg_loss += total_loss.item()
 
-                recall, precision, hmean = self.eval_detection(val_dataset)
+                recall, precision, hmean = self.eval_detection(val_dataset, threshiou)
                 avg_loss /= len(val_dataset.dataset)
                 history['val_loss'].append(avg_loss)
                 history['recall'].append(recall)
