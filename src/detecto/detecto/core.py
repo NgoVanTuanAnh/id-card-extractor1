@@ -424,10 +424,14 @@ class Model:
         for param_group in optimizer.param_groups:
             return param_group['lr']
 
-    def eval_detection(self, val_dataset):
+    def eval_detection(self, val_dataset, threshiou=0.5):
+        
+        num_gt_boxes = 0
+        num_det_boxes = 0
+        num_correct_boxes = 0
+        
         self._model.eval()
         with torch.no_grad():
-            mAPs = []
             if val_dataset is not None and not isinstance(val_dataset, DataLoader):
                 val_dataset = DataLoader(val_dataset)
             with torch.no_grad():
@@ -442,9 +446,18 @@ class Model:
                         'scores': torch.tensor(final_scores).to(self._device)
                     }]
                     # preds = self._model(images)
-                    mAP = self.metric(preds, targets)
-                    mAPs.append(mAP['iou'].item())
-        return torch.tensor(mAPs).mean()
+                    num_gt_boxes += len(targets[0]['boxes'])
+                    num_det_boxes += len(final_boxes)
+                    iou = self.metric(preds, targets)
+                    del iou['iou']
+                    for key in iou:
+                        if iou[key] >= threshiou:
+                            num_correct_boxes += 1
+                            
+            recall = num_correct_boxes / num_gt_boxes
+            precision = num_correct_boxes / num_det_boxes
+            hmean = 2 * precision * recall / (precision + recall)
+        return recall, precision, hmean
     
     def get_lr(self, optimizer):
         for param_group in optimizer.param_groups:
@@ -539,7 +552,9 @@ class Model:
         history = {
             'loss': [],
             'val_loss': [],
-            'mAP': []
+            'recall': [],
+            'precision': [],
+            'hmean': []
         }
         # Train on the entire dataset for the specified number of times (epochs)
         previous_loss = 999
@@ -588,13 +603,17 @@ class Model:
                         total_loss = sum(loss for loss in loss_dict.values())
                         avg_loss += total_loss.item()
 
-                avg_map = self.eval_detection(val_dataset)
+                recall, precision, hmean = self.eval_detection(val_dataset)
                 avg_loss /= len(val_dataset.dataset)
                 history['val_loss'].append(avg_loss)
-                history['mAP'].append(avg_map)
+                history['recall'].append(recall)
+                history['precision'].append(precision)
+                history['hmean'].append(hmean)
 
                 if verbose:
-                    print('mAP:', avg_map.item())
+                    print('Recall:', recall)
+                    print('Precision:', precision)
+                    print('Hmean:', hmean)
                     print('Loss: {}'.format(avg_loss))
 
                 if os.path.isdir('save') is not True:
