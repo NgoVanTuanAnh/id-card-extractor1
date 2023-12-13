@@ -306,3 +306,4 @@ def show_labeled_image(image, boxes, labels=None):
         ax.add_patch(rect)
 
     plt.show()
+    return rect

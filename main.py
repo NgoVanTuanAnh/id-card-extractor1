@@ -1,3 +1,5 @@
+import os
+import cv2
 import sys
 sys.path.append('src/detecto/')
 import gradio as gr
@@ -5,20 +7,19 @@ import numpy as np
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 from PIL import Image
-from vietocr.tool.config import Cfg
-from vietocr.predict import Predictor
 from src.detecto.detecto import core, utils
 from src.utils import non_max_suppression_fast, get_center_point, perspective_transform, find_miss_corner
+import datetime
 
 def load_model_id_card():
     classes = ['top_left', 'top_right', 'bottom_left', 'bottom_right']
     model = core.Model(classes)
-    return model.load('./src/weight/id_card_4_corner.pth', classes)
+    return model.load('./src/weight/weight-model-13.pth', classes)
 
 def load_model_detect_info():
     classes = ['id', 'name', 'date']
     model = core.Model(classes)
-    return model.load('./src/weight/detect_info_.pth', classes)
+    return model.load('./src/weight/detect-id/best-model.pth', classes)
 
 def get_point(image, model):
     labels, boxes, scores = model.predict_top(image)
@@ -43,26 +44,36 @@ def getTransform(image, model):
     crop = perspective_transform(image, source_points)
     return crop
 
-def get_info(image, detector, model):
+def get_info(image, model, save=False):
     boxes, labels = get_point(image, model)
-    info = {}
+    info = {
+        'id': '',
+        'name': '',
+        'date': ''
+    }
     for batch in zip(boxes, labels):
         bbox, label = batch
         x, y, w, h = bbox
         img = Image.fromarray(image[y:h, x-5:w+5])
-        anno = detector.predict(img)
-        info[label] = anno
-    return info
+        if save:
+            now = datetime.datetime.now()
+            img.save(os.path.join('./rec_crop/', f'{now}.jpg'))
+        # cv2.rectangle(image,(x, y),(w,h),(0,255,0),2)
+        # cv2.putText(image, label, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+    return image, info
     
-def main(image):
+def main(image, save_rec=True):
     image_crop = getTransform(image, model_corner)
-    info = get_info(image_crop, detector, model_info)
-    return info['id'], info['name'], info['date']
+    image_crop1 = image_crop.copy()
+    image_info, info = get_info(image_crop1, model_info, save_rec)
+    return image_crop, image_info, info['id'], info['name'], info['date']
 
 def GUI():
     demo = gr.Interface(main, 
                         inputs=['image'], 
-                        outputs=[gr.Textbox(label='ID'),
+                        outputs=[gr.Image(label='Image Crop'),
+                                 gr.Image(label='Detect Info'),
+                                 gr.Textbox(label='ID'),
                                  gr.Textbox(label='Name'),
                                  gr.Textbox(label='Date of Birth')])
     demo.launch(share=False)
@@ -70,8 +81,4 @@ def GUI():
 if __name__ == "__main__":
     model_corner = load_model_id_card()
     model_info = load_model_detect_info()
-    config = Cfg.load_config_from_name('vgg_transformer')
-    config['cnn']['pretrained']=False
-    config['device'] = 'cuda:0'
-    detector = Predictor(config)
     GUI()
