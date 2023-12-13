@@ -11,15 +11,14 @@ from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from models import CRNN
 from datasets import IDDataset
-from config import train_config
 from utils import *
 from torchvision.models.resnet import resnet18
 
 
 class Train:
     
-    def __init__(self, trainset, validset, backbone, learning_rate=1e-3, weight_decay=1e-3, evalid=5) -> None:
-        self.config = train_config
+    def __init__(self, config, trainset, validset, backbone, learning_rate=1e-3, weight_decay=1e-3, evalid=5) -> None:
+        self.config = config
         self.trainloader = DataLoader(trainset, self.config['batch_size'], shuffle=True)
         self.validloader = DataLoader(validset, self.config['batch_size'], shuffle=False)
         self.model = CRNN(backbone, len(self.config['chars']), self.config['rnn_hidden']).apply(self.weights_init).to(device)
