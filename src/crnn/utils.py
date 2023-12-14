@@ -1,10 +1,8 @@
 import torch
 import torch.nn.functional as F
-from config import common_config
+from config import *
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu' 
-IDX2CHAR = {i:v for i, v in enumerate(common_config['chars'])}
-CHAR2IDX = {v:i for i, v in enumerate(common_config['chars'])} 
 
 def encode_text_batch(text_batch):
 

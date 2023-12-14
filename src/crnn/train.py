@@ -4,6 +4,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
+from datetime import datetime
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
@@ -32,6 +33,8 @@ class Train:
             'val_accuracy': []
         }
         self.print_eval = evalid
+        self.now = "{:%m-%d-%Y-%H-%M-%S}".format(datetime.now())
+        
     
     def step(self, batch):
         image, text = batch
@@ -76,10 +79,10 @@ class Train:
         avg_loss = total_loss / len(self.validloader)
         return avg_loss
     
-    def train(self):
+    def fit(self):
         prev_loss = 999
         for epoch in range(self.config['epochs']):
-            print('EPOCH: %03d' % (epoch + 1))
+            print('EPOCH: %03d/%03d' % (epoch, self.config['epochs']))
             total_loss = 0
             pbar = tqdm(enumerate(self.trainloader), ncols=100)
             for idx, batch in pbar:
@@ -97,7 +100,14 @@ class Train:
                 if val_loss < prev_loss:
                     prev_loss = val_loss
                     self.save('best-model.pth')
-                    print('Best mode saved with loss: {}'.format(val_loss))
+                    print('Best model saved with loss: {}'.format(val_loss))
+                
+                # Create folder for save model
+                folder = self.config['save_dir'] + self.now
+                if not os.path.isdir(folder):
+                    os.mkdir(folder)
+                print('Model saved at epoch {}'.format(epoch))
+                self.save(os.path.join(folder, 'model-{}.pth'.format(epoch)))
                     
                 val_acc = self.calc_accuracy(self.validloader)
                 self.history['val_loss'].append(val_loss)
@@ -131,28 +141,3 @@ class Train:
         elif classname.find('BatchNorm') != -1:
             m.weight.data.normal_(1.0, 0.02)
             m.bias.data.fill_(0)
-            
-
-if __name__ == "__main__":
-    with open(os.path.join(train_config['data_dir'], 'rec_id.txt'), 'r') as f:
-        data = f.readlines()
-        f.close()
-    
-    paths, contexts = list(), list()
-    for d in data:
-        path, context = d.split('\t')
-        paths.append(path)
-        contexts.append(context.strip())
-    
-    data = {
-        'image-path': paths,
-        'gt': contexts
-    }
-    df = pd.DataFrame(data)
-    traindata, validdata = train_test_split(df)
-    trainset = IDDataset(train_config['data_dir'], traindata)
-    validset = IDDataset(train_config['data_dir'], validdata)
-    resnet = resnet18(pretrained=True)
-    
-    train = Train(trainset, validset, resnet)
-    train.train()

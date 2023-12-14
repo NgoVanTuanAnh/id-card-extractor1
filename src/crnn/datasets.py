@@ -16,7 +16,7 @@ class IDDataset(Dataset):
         path, gt = self.data.iloc[idx]
         image = Image.open(os.path.join(self.root, path))
         transform = transforms.Compose([
-            transforms.Pad(padding=(5, 0, 5, 0), fill=200),
+            transforms.Pad(padding=(1, 0, 1, 0), fill=200),
             transforms.ToTensor(),
             transforms.Resize(size=(50, 512)),
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
