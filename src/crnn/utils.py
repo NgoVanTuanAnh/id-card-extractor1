@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from config import *
 
@@ -56,3 +57,12 @@ def correct_prediction(word):
     corrected_word = "".join(parts)
     return corrected_word
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if type(m) in [nn.Linear, nn.Conv2d, nn.Conv1d]:
+        torch.nn.init.xavier_uniform_(m.weight)
+        if m.bias is not None:
+            m.bias.data.fill_(0.01)
+    elif classname.find('BatchNorm') != -1:
+        m.weight.data.normal_(1.0, 0.02)
+        m.bias.data.fill_(0)

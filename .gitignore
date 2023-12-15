@@ -5,3 +5,4 @@ weight/
 __pycache__/
 test/
 rec_crop/
+testset/

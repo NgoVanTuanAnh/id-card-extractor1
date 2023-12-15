@@ -4,9 +4,9 @@ from torchvision import transforms
 from torch.utils.data import Dataset
 
 class IDDataset(Dataset):
-    def __init__(self, root, data, transform=False):
+    def __init__(self, config, data, transform=False):
         self.data = data
-        self.root = root
+        self.config = config
         self.transform = transform
 
     def __len__(self):
@@ -14,11 +14,11 @@ class IDDataset(Dataset):
 
     def __getitem__(self, idx):
         path, gt = self.data.iloc[idx]
-        image = Image.open(os.path.join(self.root, path))
+        image = Image.open(os.path.join(self.config['data_dir'], path))
         transform = transforms.Compose([
-            transforms.Pad(padding=(1, 0, 1, 0), fill=200),
+            transforms.Pad(padding=(3, 0, 3, 0), fill=200),
             transforms.ToTensor(),
-            transforms.Resize(size=(50, 512)),
+            transforms.Resize(size=(self.config['img_height'], self.config['img_width'])),
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ])
         if self.transform:

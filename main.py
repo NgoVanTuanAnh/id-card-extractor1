@@ -44,20 +44,26 @@ def getTransform(image, model):
     crop = perspective_transform(image, source_points)
     return crop
 
-def get_info(image, model, save=False):
+def get_info(image, image_, model, save=False):
     boxes, labels = get_point(image, model)
     info = {
         'id': '',
         'name': '',
         'date': ''
     }
-    for batch in zip(boxes, labels):
+
+    now = "{:%m-%d-%Y-%H-%M-%S}".format(datetime.datetime.now())
+    dirname = 'id-card_' + now
+    path = os.path.join('./testset', dirname)
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    Image.fromarray(image_).save(os.path.join(path, '0.jpg'))
+    for idx, batch in enumerate(zip(boxes, labels)):
         bbox, label = batch
         x, y, w, h = bbox
         img = Image.fromarray(image[y:h, x-5:w+5])
         if save:
-            now = datetime.datetime.now()
-            img.save(os.path.join('./rec_crop/', f'{now}.jpg'))
+            img.save(os.path.join(path, f'{idx+1}.jpg'))
         # cv2.rectangle(image,(x, y),(w,h),(0,255,0),2)
         # cv2.putText(image, label, (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
     return image, info
@@ -65,7 +71,7 @@ def get_info(image, model, save=False):
 def main(image, save_rec=True):
     image_crop = getTransform(image, model_corner)
     image_crop1 = image_crop.copy()
-    image_info, info = get_info(image_crop1, model_info, save_rec)
+    image_info, info = get_info(image_crop1, image, model_info, save_rec)
     return image_crop, image_info, info['id'], info['name'], info['date']
 
 def GUI():

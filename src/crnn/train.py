@@ -18,23 +18,19 @@ from torchvision.models.resnet import resnet18
 
 class Train:
     
-    def __init__(self, config, trainset, validset, backbone, learning_rate=1e-3, weight_decay=1e-3, evalid=5) -> None:
+    def __init__(self, config) -> None:
         self.config = config
-        self.trainloader = DataLoader(trainset, self.config['batch_size'], shuffle=True)
-        self.validloader = DataLoader(validset, self.config['batch_size'], shuffle=False)
-        self.model = CRNN(backbone, len(self.config['chars']), self.config['rnn_hidden']).apply(self.weights_init).to(device)
-        self.criterion = nn.CTCLoss(blank=0)
-        self.optim = AdamW(self.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-        self.lr_scheduler = ReduceLROnPlateau(self.optim, verbose=True, patience=5)
+        self.model = None
+        self.criterion = None
+        self.optim = None
+        
         self.history = {
             'loss': [],
             'val_loss': [],
             'accuracy': [],
             'val_accuracy': []
         }
-        self.print_eval = evalid
         self.now = "{:%m-%d-%Y-%H-%M-%S}".format(datetime.now())
-        
     
     def step(self, batch):
         image, text = batch
@@ -45,7 +41,21 @@ class Train:
         nn.utils.clip_grad_norm_(self.model.parameters(), self.config['clip_norm'])
         self.optim.step()
         return loss.item()
-
+        
+    def valid(self, validloader):
+        num_samples = len(validloader)
+        with torch.no_grad():
+            self.model.zero_grad()
+            total_loss = 0
+            for batch in validloader:
+                image, text = batch
+                text_batch_logits = self.model(image.to(device))
+                loss = self.compute_loss(text, text_batch_logits)
+                total_loss += loss.item()
+        
+        avg_loss = total_loss / num_samples
+        return avg_loss
+    
     def compute_loss(self, text_batch, text_batch_logits):
         """
         text_batch: list of strings of length equal to batch size
@@ -60,60 +70,50 @@ class Train:
 
         return loss
     
-    def load(self, PATH):
-        self.model.load_state_dict(torch.load(PATH))
-    
-    def save(self, PATH):
-        torch.save(self.model.state_dict(), PATH)
-        
-    def valid(self):
-        with torch.no_grad():
-            self.model.zero_grad()
-            total_loss = 0
-            for batch in self.validloader:
-                image, text = batch
-                text_batch_logits = self.model(image.to(device))
-                loss = self.compute_loss(text, text_batch_logits)
-                total_loss += loss.item()
-        
-        avg_loss = total_loss / len(self.validloader)
-        return avg_loss
-    
-    def fit(self):
+    def fit(self, model, trainloader, validloader, criterion, optimizer):
+        # init
+        self.model = model
+        self.criterion = criterion
+        self.optim = optimizer
+        lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optim, verbose=True, patience=5)
         prev_loss = 999
+        
+        # Training process
         for epoch in range(self.config['epochs']):
             print('EPOCH: %03d/%03d' % (epoch, self.config['epochs']))
             total_loss = 0
-            pbar = tqdm(enumerate(self.trainloader), ncols=100)
+            pbar = tqdm(enumerate(trainloader), ncols=100)
             for idx, batch in pbar:
                 loss = self.step(batch)
                 total_loss += loss
                 pbar.set_description("Loss: %0.5f" % (total_loss/(idx + 1)))
-            avg_loss = total_loss / len(self.trainloader)
+            avg_loss = total_loss / len(trainloader)
+
             self.history['loss'].append(avg_loss)
-            self.history['accuracy'].append(self.trainloader)
+            self.history['accuracy'].append(trainloader)
             
             # Eval model every print_eval epoch
-            if epoch % self.print_eval == 0:
-                val_loss = self.valid()
-                # Save the best model
-                if val_loss < prev_loss:
-                    prev_loss = val_loss
-                    self.save('best-model.pth')
-                    print('Best model saved with loss: {}'.format(val_loss))
+            val_loss = self.valid(validloader)
+            # Create folder for save model
+            pathdir = os.path.join(self.config['save_dir'], self.now)
+            if not os.path.isdir(self.config['save_dir']):
+                os.mkdir(self.config['save_dir'])
+                os.mkdir(pathdir)
+            if not os.path.isdir(pathdir):
+                os.mkdir(pathdir)
+            print('Model saved at epoch {}'.format(epoch))
+            self.save(os.path.join(pathdir, 'model-{}.pth'.format(epoch)))
+            # Save the best model
+            if val_loss < prev_loss:
+                prev_loss = val_loss
+                self.save(os.path.join(pathdir, 'best-model.pth'))
+                print('Best model saved with loss: {}'.format(val_loss))
                 
-                # Create folder for save model
-                folder = self.config['save_dir'] + self.now
-                if not os.path.isdir(folder):
-                    os.mkdir(folder)
-                print('Model saved at epoch {}'.format(epoch))
-                self.save(os.path.join(folder, 'model-{}.pth'.format(epoch)))
-                    
-                val_acc = self.calc_accuracy(self.validloader)
-                self.history['val_loss'].append(val_loss)
-                self.history['val_accuracy'].append(val_acc)
-                print("Val_loss: %.5f ====== Val_Acc: %.5f" % (val_loss, val_acc))
-            self.lr_scheduler.step(avg_loss)
+            val_acc = self.calc_accuracy(validloader)
+            self.history['val_loss'].append(val_loss)
+            self.history['val_accuracy'].append(val_acc)
+            print("Val_loss: %.5f ====== Val_Acc: %.5f" % (val_loss, val_acc))
+            lr_scheduler.step(avg_loss)
     
     def calc_accuracy(self, loader):
         correct = 0
@@ -124,20 +124,17 @@ class Train:
                 image, text = batch
                 text_batch_logits = self.model(image.to(device))
                 preds = decode_predictions(text_batch_logits.cpu())
-                for i, pred in enumerate(preds):
+                for i, _batch in enumerate(zip(preds, text)):
                     num_sample += 1
+                    pred, t = _batch
                     text_pred = correct_prediction(pred)
-                    if text_pred == text[i]:
+                    if text_pred == t:
                         correct += 1
             
         return correct / num_sample
-       
-    def weights_init(self, m):
-        classname = m.__class__.__name__
-        if type(m) in [nn.Linear, nn.Conv2d, nn.Conv1d]:
-            torch.nn.init.xavier_uniform_(m.weight)
-            if m.bias is not None:
-                m.bias.data.fill_(0.01)
-        elif classname.find('BatchNorm') != -1:
-            m.weight.data.normal_(1.0, 0.02)
-            m.bias.data.fill_(0)
+
+    def load(self, PATH):
+        self.model.load_state_dict(torch.load(PATH))
+    
+    def save(self, PATH):
+        torch.save(self.model.state_dict(), PATH)
