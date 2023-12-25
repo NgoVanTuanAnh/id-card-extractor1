@@ -4,3 +4,4 @@ torchmetrics
 opencv-python
 numpy
 pandas
+gradio
