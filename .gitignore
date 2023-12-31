@@ -6,3 +6,5 @@ __pycache__/
 test/
 rec_crop/
 testset/
+notebooks/
+classifer_number/
