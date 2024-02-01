@@ -9,7 +9,7 @@ common_config = {
 }
 
 config_training = {
-    'vocab': '-/0123456789',
+    'vocab': ' /0123456789ABCDGHIKLMNOPQRSTUVXYÀÁÂÃÊÌÍÐÒÓÔÕÙÚÝĂĐĨŨƠƯẠẢẤẦẬẮẰẶẾỀỂỄỆỊỌỐỒỔỖỘỚỜỢỤỦỨỪỮỰỲỸ-',
     'epochs': 50,
     'batch_size': 32,
     'lr': 1e-3,

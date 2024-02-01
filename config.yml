@@ -1,0 +1,46 @@
+DETECTO:
+  CORNER:
+    CLASSES:
+      - top_left
+      - top_right
+      - bottom_left
+      - bottom_right
+    CHECKPOINT: ./src/weight/weight-model-13.pth
+  INFO:
+    CLASSES:
+      - id
+      - name
+      - date
+    CHECKPOINT: ./src/weight/detect-id/best-model.pth
+
+CRNN:
+  VOCAB: / 0123456789ABCDGHIKLMNOPQRSTUVXYÀÁÂÃÊÌÍÐÒÓÔÕÙÚÝĂĐĨŨƠƯẠẢẤẦẬẮẰẶẾỀỂỄỆỊỌỐỒỔỖỘỚỜỢỤỦỨỪỮỰỲỸ-
+  CHECKPOINT: ./src/crnn/checkpoints/12-31-2023-21-32-41/best-model.pth
+  TRAINING:
+    DATA_DIR: ../../../data_rec/data/
+    SAVE_DIR: ./checkpoints/
+    EPOCHS: 50
+    LR: 0.001
+    WEIGHT_DECAY: 0.001
+    CLIP_NORM: 5
+  WIDTH: 512
+  HEIGHT: 50
+  MAP_TO_SEQ_HIDDEN: 64
+  RNN_HIDDEN: 256
+  NORMLIZE:
+    MEAN:
+      - 0.485
+      - 0.456
+      - 0.406
+    STD:
+      - 0.229
+      - 0.224
+      - 0.225
+  PAD:
+    PADDING:
+      - 3
+      - 0
+      - 3
+      - 0
+    FILL: 200
+    

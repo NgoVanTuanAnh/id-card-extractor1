@@ -10,11 +10,11 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from models import CRNN
-from datasets import IDDataset
-from utils import *
 from torchvision.models.resnet import resnet18
 
+from .models import CRNN
+from .datasets import IDDataset
+from .utils import *
 
 class Train:
     
@@ -38,7 +38,7 @@ class Train:
         text_batch_logits = self.model(image.to(device))
         loss = self.compute_loss(text, text_batch_logits)
         loss.backward()
-        nn.utils.clip_grad_norm_(self.model.parameters(), self.config['clip_norm'])
+        nn.utils.clip_grad_norm_(self.model.parameters(), self.config.CLIP_NORM)
         self.optim.step()
         return loss.item()
         
@@ -79,8 +79,8 @@ class Train:
         prev_loss = 999
         
         # Training process
-        for epoch in range(self.config['epochs']):
-            print('EPOCH: %03d/%03d' % (epoch, self.config['epochs']))
+        for epoch in range(self.config.EPOCHS):
+            print('EPOCH: %03d/%03d' % (epoch, self.config.EPOCHS))
             total_loss = 0
             pbar = tqdm(enumerate(trainloader), ncols=100)
             for idx, batch in pbar:
@@ -95,9 +95,9 @@ class Train:
             # Eval model every print_eval epoch
             val_loss = self.valid(validloader)
             # Create folder for save model
-            pathdir = os.path.join(self.config['save_dir'], self.now)
-            if not os.path.isdir(self.config['save_dir']):
-                os.mkdir(self.config['save_dir'])
+            pathdir = os.path.join(self.config.SAVE_DIR, self.now)
+            if not os.path.isdir(self.config.SAVE_DIR):
+                os.mkdir(self.config.SAVE_DIR)
                 os.mkdir(pathdir)
             if not os.path.isdir(pathdir):
                 os.mkdir(pathdir)

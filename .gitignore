@@ -8,3 +8,4 @@ rec_crop/
 testset/
 notebooks/
 classifer_number/
+logs/

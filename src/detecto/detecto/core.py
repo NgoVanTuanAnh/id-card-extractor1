@@ -5,12 +5,12 @@ import torch
 import torchvision
 
 from torchmetrics.detection import IntersectionOverUnion
-from detecto.config import config
-from detecto.utils import default_transforms, filter_top_predictions, xml_to_csv, _is_iterable, read_image, non_max_suppression_fast
 from torchvision import transforms
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from tqdm import tqdm
 
+from .config import config
+from .utils import default_transforms, filter_top_predictions, xml_to_csv, _is_iterable, read_image, non_max_suppression_fast
 
 class DataLoader(torch.utils.data.DataLoader):
 
