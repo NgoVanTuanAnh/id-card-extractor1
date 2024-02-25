@@ -14,7 +14,7 @@ DETECTO:
     CHECKPOINT: ./src/weight/detect-id/best-model.pth
 
 CRNN:
-  VOCAB: / 0123456789ABCDGHIKLMNOPQRSTUVXYÀÁÂÃÊÌÍÐÒÓÔÕÙÚÝĂĐĨŨƠƯẠẢẤẦẬẮẰẶẾỀỂỄỆỊỌỐỒỔỖỘỚỜỢỤỦỨỪỮỰỲỸ-
+  VOCAB: " /0123456789ABCDGHIKLMNOPQRSTUVXYÀÁÂÃÊÌÍÐÒÓÔÕÙÚÝĂĐĨŨƠƯẠẢẤẦẬẮẰẶẾỀỂỄỆỊỌỐỒỔỖỘỚỜỢỤỦỨỪỮỰỲỸ-"
   CHECKPOINT: ./src/crnn/checkpoints/12-31-2023-21-32-41/best-model.pth
   TRAINING:
     DATA_DIR: ../../../data_rec/data/

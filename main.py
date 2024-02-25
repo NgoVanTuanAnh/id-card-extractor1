@@ -1,7 +1,7 @@
 from PIL import Image
 from src.crnn.train import Train
 from src.crnn.utils import *
-from src.crnn.config import *
+# from src.crnn.config import *
 from src.detecto.detecto import core
 from src.utils import *
 from torchvision.models import resnet18
@@ -24,6 +24,8 @@ class Inference:
         self.cfg = config
         self.corner = self._load(self.cfg.DETECTO.CORNER)
         self.info_ext = self._load(self.cfg.DETECTO.INFO)
+        self.idx2char = {i: v for i, v in enumerate(self.cfg.CRNN.VOCAB)}
+        self.char2idx = {v: i for i, v in enumerate(self.cfg.CRNN.VOCAB)}
         self.crnn = Train(self.cfg.CRNN.TRAINING)
         self.crnn.model = CRNN(backbone=resnet,
                                num_chars=len(self.cfg.CRNN.VOCAB),
@@ -131,7 +133,7 @@ class Inference:
         ])
         image = transform(image)
         text_batch_logits = self.crnn.model(image[None, :, :, :])
-        decode = decode_predictions(text_batch_logits.cpu())
+        decode = decode_predictions(text_batch_logits.cpu(), self.idx2char)
         return correct_prediction(decode[0])
 
     def __call__(self, image):
