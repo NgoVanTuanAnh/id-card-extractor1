@@ -5,17 +5,17 @@ DETECTO:
       - top_right
       - bottom_left
       - bottom_right
-    CHECKPOINT: ./src/weight/weight-model-13.pth
+    CHECKPOINT: './src/weight/detect_corner.pth'
   INFO:
     CLASSES:
       - id
       - name
       - date
-    CHECKPOINT: ./src/weight/detect-id/best-model.pth
+    CHECKPOINT: './src/weight/detect_id.pth'
 
 CRNN:
   VOCAB: " /0123456789ABCDGHIKLMNOPQRSTUVXYÀÁÂÃÊÌÍÐÒÓÔÕÙÚÝĂĐĨŨƠƯẠẢẤẦẬẮẰẶẾỀỂỄỆỊỌỐỒỔỖỘỚỜỢỤỦỨỪỮỰỲỸ-"
-  CHECKPOINT: ./src/crnn/checkpoints/12-31-2023-21-32-41/best-model.pth
+  CHECKPOINT: './src/weight/crnn.pth'
   TRAINING:
     DATA_DIR: ../../../data_rec/data/
     SAVE_DIR: ./checkpoints/

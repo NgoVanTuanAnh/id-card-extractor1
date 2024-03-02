@@ -18,7 +18,7 @@ from .utils import *
 
 class Train:
     
-    def __init__(self, config) -> None:
+    def __init__(self, config=None) -> None:
         self.config = config
         self.model = None
         self.criterion = None

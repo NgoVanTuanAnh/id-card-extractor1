@@ -55,7 +55,6 @@ class Inference:
 
         Args:
             image (PIL.Image): Ảnh ban đầu
-            model (core.Model): Model detect cạnh
 
         Returns:
             nd.array: Ảnh đã được crop
