@@ -23,7 +23,7 @@ class Train:
         self.model = None
         self.criterion = None
         self.optim = None
-        
+
         self.history = {
             'loss': [],
             'val_loss': [],
@@ -31,6 +31,8 @@ class Train:
             'val_accuracy': []
         }
         self.now = "{:%m-%d-%Y-%H-%M-%S}".format(datetime.now())
+        self.idx2char = {i: v for i, v in enumerate(self.config.VOCAB)}
+        self.char2idx = {v: i for i, v in enumerate(self.config.VOCAB)}
     
     def step(self, batch):
         image, text = batch
@@ -38,7 +40,7 @@ class Train:
         text_batch_logits = self.model(image.to(device))
         loss = self.compute_loss(text, text_batch_logits)
         loss.backward()
-        nn.utils.clip_grad_norm_(self.model.parameters(), self.config.CLIP_NORM)
+        nn.utils.clip_grad_norm_(self.model.parameters(), self.config.TRAINING.CLIP_NORM)
         self.optim.step()
         return loss.item()
         
@@ -79,8 +81,8 @@ class Train:
         prev_loss = 999
         
         # Training process
-        for epoch in range(self.config.EPOCHS):
-            print('EPOCH: %03d/%03d' % (epoch, self.config.EPOCHS))
+        for epoch in range(self.config.TRAINING.EPOCHS):
+            print('EPOCH: %03d/%03d' % (epoch, self.config.TRAINING.EPOCHS))
             total_loss = 0
             pbar = tqdm(enumerate(trainloader), ncols=100)
             for idx, batch in pbar:
@@ -95,9 +97,9 @@ class Train:
             # Eval model every print_eval epoch
             val_loss = self.valid(validloader)
             # Create folder for save model
-            pathdir = os.path.join(self.config.SAVE_DIR, self.now)
-            if not os.path.isdir(self.config.SAVE_DIR):
-                os.mkdir(self.config.SAVE_DIR)
+            pathdir = os.path.join(self.config.TRAINING.SAVE_DIR, self.now)
+            if not os.path.isdir(self.config.TRAINING.SAVE_DIR):
+                os.mkdir(self.config.TRAINING.SAVE_DIR)
                 os.mkdir(pathdir)
             if not os.path.isdir(pathdir):
                 os.mkdir(pathdir)
@@ -123,7 +125,7 @@ class Train:
             for batch in loader:
                 image, text = batch
                 text_batch_logits = self.model(image.to(device))
-                preds = decode_predictions(text_batch_logits.cpu())
+                preds = decode_predictions(text_batch_logits.cpu(), self.idx2char)
                 for i, _batch in enumerate(zip(preds, text)):
                     num_sample += 1
                     pred, t = _batch

@@ -5,7 +5,18 @@ from src.crnn.config import *
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-
+def nested_parser(data):
+    # Base case: if data is not a dictionary, return it as is
+    if not isinstance(data, dict):
+        return data
+    # Recursive case: if data is a dictionary, create a class object with attributes
+    else:
+        class Config:
+            pass
+        for key, value in data.items():
+            setattr(Config, key, nested_parser(value))
+        return Config
+    
 def encode_text_batch(text_batch):
 
     text_batch_targets_lens = [len(text) for text in text_batch]

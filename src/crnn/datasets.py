@@ -14,11 +14,11 @@ class IDDataset(Dataset):
 
     def __getitem__(self, idx):
         path, gt = self.data.iloc[idx]
-        image = Image.open(os.path.join(self.config['data_dir'], path))
+        image = Image.open(os.path.join(self.config.CRNN.TRAINING.DATA_DIR, path))
         transform = transforms.Compose([
-            transforms.Pad(padding=(5, 0, 5, 0), fill=200),
+            transforms.Pad(padding=self.config.CRNN.PAD.PADDING, fill=self.config.CRNN.PAD.FILL),
             transforms.ToTensor(),
-            transforms.Resize(size=(self.config['img_height'], self.config['img_width'])),
+            transforms.Resize(size=(self.config.CRNN.HEIGHT, self.config.CRNN.WIDTH)),
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ])
         if self.transform:
