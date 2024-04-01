@@ -26,7 +26,7 @@ class Inference:
         self.info_ext = self._load(self.cfg.DETECTO.INFO)
         self.idx2char = {i: v for i, v in enumerate(self.cfg.CRNN.VOCAB)}
         self.char2idx = {v: i for i, v in enumerate(self.cfg.CRNN.VOCAB)}
-        self.crnn = Train(self.cfg.CRNN.TRAINING)
+        self.crnn = Train(self.cfg.CRNN)
         self.crnn.model = CRNN(backbone=resnet,
                                num_chars=len(self.cfg.CRNN.VOCAB),
                                rnn_hidden_size=self.cfg.CRNN.RNN_HIDDEN)
@@ -169,4 +169,4 @@ if __name__ == "__main__":
                                  gr.Textbox(label='ID'),
                                  gr.Textbox(label='Name'),
                                  gr.Textbox(label='Date of Birth')])
-    demo.launch(share=False)
+    demo.launch(share=True)
